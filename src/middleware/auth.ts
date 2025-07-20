@@ -1,21 +1,27 @@
-import { auth } from '../config/firebase';
 import { Request, Response, NextFunction } from 'express';
-import * as admin from 'firebase-admin';
+import jwt from 'jsonwebtoken';
+import { User } from '../models/user/user.model';
+const JWT_SECRET = process.env.JWT_SECRET || 'skipli-love';
+
 
 interface AuthRequest extends Request {
-  user?: admin.auth.DecodedIdToken;
+  user?: User; 
 }
-const verifyToken = async (req: AuthRequest, res: Response,next: NextFunction)=>{
-  const token = req.headers.authorization?.split('Bearer ')[1];
+
+const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const token = req.cookies?.token;
+
   if (!token) {
-    return res.status(401).json({ message: 'Authorization token missing' });
+    return res.status(401).json({ message: 'Không tìm thấy token (cookie)' });
   }
-  try{
-    const decodedToken =  await auth.verifyIdToken(token);
-    req.user = decodedToken;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded as User;
     next();
-  }catch(error){
-    return res.status(401).json({ message: 'Invalid authorization token' });
+  } catch (err) {
+    return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
   }
-}
+};
+
 export default verifyToken;

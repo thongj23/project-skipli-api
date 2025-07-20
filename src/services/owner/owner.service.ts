@@ -1,28 +1,9 @@
 import { auth, db } from "../../config/firebase";
 import { Employee } from "../../models/employee/employee.model";
 import { User } from "../../models/user/user.model";
-
+import { sendSetupEmail } from '../../services/email/email.service';
 export class OwnerService {
-  async login(phoneNumber: string, role: "manager" | "employee" = "manager") {
-    if (!phoneNumber) throw new Error("Phone number is required");
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiredAt = new Date(Date.now() + 5 * 60 * 1000);
-
-    await db.collection("OtpCodes").doc(phoneNumber).set({
-      otp,
-      expiredAt,
-      role,
-    });
-
-    return {
-      success: true,
-      message: "OTP generated",
-      phoneNumber,
-      otp,
-      expiresIn: "5 minutes",
-    };
-  }
+ 
 
   async getAllEmployees(): Promise<Employee[]> {
     const snapshot = await db.collection("Employees").get();
@@ -36,34 +17,35 @@ export class OwnerService {
     return employeeDoc.data() as Employee;
   }
 
-  async createEmployee(
-    name: string,
-    email: string,
-    department: string
-  ): Promise<{ success: boolean; employeeId: string }> {
-    if (!name || !email || !department)
-      throw new Error("All fields are required");
-    const userRecord = await auth.createUser({ email });
-    const employeeId = userRecord.uid;
-    const employee: Employee = {
-      employeeId,
-      name,
-      email,
-      department,
-      tasks: [],
-      workSchedule: {},
-      role: "employee",
-    };
-    const user: User = {
-      uid: employeeId,
-      email,
-      role: "employee",
-      createdAt: new Date(),
-    };
-    await db.collection("Employees").doc(employeeId).set(employee);
-    await db.collection("Users").doc(employeeId).set(user, { merge: true });
-    return { success: true, employeeId };
-  }
+async createEmployee(
+  name: string,
+  email: string
+): Promise<{ success: boolean; employeeId: string }> {
+  if (!name || !email) throw new Error("All fields are required");
+
+  const userRecord = await auth.createUser({ email });
+  const employeeId = userRecord.uid;
+
+  const employee: Employee = {
+    employeeId,
+    name,
+    email,
+    tasks: [],
+    workSchedule: {},
+    role: "employee",
+  };
+
+  const user: User = {
+    uid: employeeId,
+    email,
+    role: "employee",
+    createdAt: new Date(),
+  };
+  await db.collection("Employees").doc(employeeId).set(employee);
+  await db.collection("Users").doc(employeeId).set(user, { merge: true });
+  await sendSetupEmail(email, employeeId);
+  return { success: true, employeeId };
+}
 
   async updateEmployee(
     employeeId: string,

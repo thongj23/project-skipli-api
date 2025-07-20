@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { OwnerService } from "../../services/owner/owner.service";
-import { EmailService } from "../../services/email/email.service";
+
 import { User } from "../../models/user/user.model";
 
 import { Employee } from "../../models/employee/employee.model";
@@ -15,26 +15,12 @@ interface EmployeeRequest extends Request {
 
 export class OwnerController {
   private ownerService: OwnerService;
-  private emailService: EmailService;
 
   constructor() {
     this.ownerService = new OwnerService();
-    this.emailService = new EmailService();
+   
   }
-//login owner
-  async login(req: LoginRequest, res: Response) {
-    try {
-      const { phoneNumber, role } = req.body;
-      if (!phoneNumber) throw new Error("Phone number are required");
-      const result = await this.ownerService.login(
-        phoneNumber,
-        role as "manager" | "employee"
-      );
-      res.json(result);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  }
+
 //get all employee
   async getAllEmployees(req: Request, res: Response) {
     try {
@@ -60,15 +46,14 @@ export class OwnerController {
 //create employee
   async createEmployee(req: EmployeeRequest, res: Response) {
     try {
-      const { name, email, department } = req.body;
-      if (!name || !email || !department)
+      const { name, email } = req.body;
+      if (!name || !email  )
         throw new Error("All fields are required");
       const result = await this.ownerService.createEmployee(
         name,
         email,
-        department
       );
-      await this.emailService.sendSetupEmail(email, result.employeeId);
+   
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

@@ -6,8 +6,10 @@ import routes from './routes';
 import { setupSocket } from './sockets/chat';
 import dotenv from 'dotenv';
 import { seedOwnerUser } from './seed/seedOwner';
-dotenv.config();
 
+
+dotenv.config();
+const cookieParser = require('cookie-parser');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -15,9 +17,15 @@ const io = new Server(server, {
     origin: '*',
   },
 });
-
-app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
+app.use(
+  cors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+  })
+);
+
 
 app.use('/api', routes);
 

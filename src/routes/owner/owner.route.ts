@@ -1,16 +1,16 @@
 import express from 'express';
 import { OwnerController } from '../../controllers/owner/owner.controller';
-import verifyFirebaseToken from '../../middleware/auth';
+import verifyToken from '../../middleware/auth';
 
 const router = express.Router();
 const ownerController = new OwnerController();
 
-router.post('/login', ownerController.login.bind(ownerController));
-router.post('/GetAllEmployees', verifyFirebaseToken, ownerController.getAllEmployees.bind(ownerController));
-router.post('/GetEmployee', verifyFirebaseToken, ownerController.getEmployee.bind(ownerController));
-router.post('/CreateEmployee', verifyFirebaseToken, ownerController.createEmployee.bind(ownerController));
-router.post('/UpdateEmployee', verifyFirebaseToken, ownerController.updateEmployee.bind(ownerController));
-router.post('/DeleteEmployee', verifyFirebaseToken, ownerController.deleteEmployee.bind(ownerController));
-router.post('/SetSchedule', verifyFirebaseToken, ownerController.setSchedule.bind(ownerController));
+
+router.get('/GetAllEmployees', verifyToken, ownerController.getAllEmployees.bind(ownerController));
+router.get('/GetEmployee', verifyToken, ownerController.getEmployee.bind(ownerController));
+router.post('', verifyToken, ownerController.createEmployee.bind(ownerController));
+router.post('/UpdateEmployee', verifyToken, ownerController.updateEmployee.bind(ownerController));
+router.post('/DeleteEmployee', verifyToken, ownerController.deleteEmployee.bind(ownerController));
+router.post('/SetSchedule', verifyToken, ownerController.setSchedule.bind(ownerController));
 
 export default router;

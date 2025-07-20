@@ -1,22 +1,35 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 
-export class EmailService {
-  private transporter: nodemailer.Transporter;
+dotenv.config();
 
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT),
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    });
-  }
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: Number(process.env.EMAIL_PORT),
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
-  async sendSetupEmail(to: string, employeeId: string) {
-    await this.transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to,
-      subject: 'Set Up Your Account',
-      text: `Click this link to set up your account: http://your-app.com/reset-password?uid=${employeeId}`,
-    });
-  }
-}
+export const sendSetupEmail = async (to: string, employeeId: string) => {
+  const baseUrl =
+    process.env.CLIENT_BASE_URL || 'http://localhost:3000'; 
+
+  const setupLink = `${baseUrl}/setup-password?employeeId=${employeeId}`;
+
+  const mailOptions = {
+    from: `"Your Company" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: 'Your Employee Account is Ready',
+    html: `
+      <h3>Welcome to our system</h3>
+      <p>Your employee ID: <strong>${employeeId}</strong></p>
+      <p>Please click the link below to set your password:</p>
+      <a href="${setupLink}" target="_blank" rel="noopener noreferrer">${setupLink}</a>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
