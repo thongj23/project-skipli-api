@@ -48,10 +48,7 @@ export class AuthController {
     }
   }
 
-  async validateAccessCode(
-    req: AccessCodeRequest,
-    res: Response
-  ): Promise<Response> {
+  async validateAccessCode(req: AccessCodeRequest, res: Response): Promise<Response> {
     try {
       const { phoneNumber, accessCode } = req.body;
 
@@ -70,11 +67,16 @@ export class AuthController {
           message: result.message,
         });
       }
+      res.cookie("accessToken", result.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 1000, 
+      });
 
       return res.status(200).json({
         success: true,
         message: result.message,
-        accessToken: result.accessToken,
         user: result.user,
       });
     } catch (error: any) {
@@ -85,6 +87,7 @@ export class AuthController {
       });
     }
   }
+
 
   async setupPassword(req: AccessCodeRequest, res: Response): Promise<Response> {
     try {

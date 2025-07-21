@@ -71,64 +71,71 @@ export class AuthService {
     }
   }
 
-  async validateAccessCode(
-    phoneNumber: string,
-    accessCode: string
-  ): Promise<{ success: boolean; message?: string; user?: Partial<User>; accessToken?: string }> {
-    try {
-      if (!phoneNumber || !accessCode) {
-        return { success: false, message: "Phone number and access code are required." };
-      }
-
-      const userQuery = await db
-        .collection("Users")
-        .where("phoneNumber", "==", phoneNumber.trim())
-        .limit(1)
-        .get();
-
-      if (userQuery.empty) {
-        return { success: false, message: "Phone number not found." };
-      }
-
-      const userDoc = userQuery.docs[0];
-      const userData = userDoc.data() as Partial<User>;
-
-      if (!userData.accessCode || userData.accessCode !== accessCode) {
-        return { success: false, message: "Invalid access code." };
-      }
-
-      if (userData.accessCodeExpiry && Date.now() > userData.accessCodeExpiry) {
-        return { success: false, message: "Access code has expired." };
-      }
-
-      await userDoc.ref.update({ accessCode: "", accessCodeExpiry: null });
-
-      const accessToken = jwt.sign(
-        {
-          uid: userDoc.id,
-          phoneNumber: userData.phoneNumber,
-          role: userData.role
-        },
-        process.env.JWT_SECRET || "your-secret-key",
-        { expiresIn: "1h" }
-      );
-
-      return {
-        success: true,
-        message: "Verification successful.",
-        accessToken,
-        user: {
-          uid: userDoc.id,
-          phoneNumber: userData.phoneNumber,
-          role: userData.role,
-          name: userData.name
-        }
-      };
-
-    } catch (error: any) {
-      return { success: false, message: "Error validating access code." };
+async validateAccessCode(
+  phoneNumber: string,
+  accessCode: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  user?: Partial<User>;
+  accessToken?: string;
+}> {
+  try {
+    if (!phoneNumber || !accessCode) {
+      return { success: false, message: "Phone number and access code are required." };
     }
+
+    const userQuery = await db
+      .collection("Users")
+      .where("phoneNumber", "==", phoneNumber.trim())
+      .limit(1)
+      .get();
+
+    if (userQuery.empty) {
+      return { success: false, message: "Phone number not found." };
+    }
+
+    const userDoc = userQuery.docs[0];
+    const userData = userDoc.data() as Partial<User>;
+
+    if (!userData.accessCode || userData.accessCode !== accessCode) {
+      return { success: false, message: "Invalid access code." };
+    }
+
+    if (userData.accessCodeExpiry && Date.now() > userData.accessCodeExpiry) {
+      return { success: false, message: "Access code has expired." };
+    }
+    await userDoc.ref.update({ accessCode: "", accessCodeExpiry: null });
+
+    const payload = {
+      uid: userDoc.id,
+      phoneNumber: userData.phoneNumber,
+      role: userData.role,
+    };
+
+    const accessToken = jwt.sign(
+      payload,
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "1h" }
+    );
+
+    return {
+      success: true,
+      message: "Verification successful.",
+      accessToken,
+      user: {
+        uid: userDoc.id,
+        phoneNumber: userData.phoneNumber,
+        role: userData.role,
+        name: userData.name,
+      },
+    };
+  } catch (error: any) {
+    console.error("validateAccessCode error:", error);
+    return { success: false, message: "Error validating access code." };
   }
+}
+
 
   async setupPassword(employeeId: string, password: string): Promise<{ success: boolean; message: string; accessToken?: string }> {
     try {
