@@ -9,4 +9,5 @@ router.post("/validate-access-code", authController.validateAccessCode.bind(auth
 router.post("/setup-password", authController.setupPassword.bind(authController));
 router.post("/set-cookie", authController.setCookie);
 router.get("/protected", authController.protectedRoute);
+router.post("/refresh-token", authController.refreshToken.bind(authController));
 export default router;

@@ -9,7 +9,7 @@ interface AuthRequest extends Request {
 }
 
 const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const token = req.cookies?.accessToken;
+  const token = req.cookies?.token;
 
   if (!token) {
     return res.status(401).json({ message: 'Token (cookie) not found' });
