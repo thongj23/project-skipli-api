@@ -7,7 +7,9 @@ export class EmployeeService {
     if (!uid || !email) throw new Error('UID and email are required');
     const user: User = {
       uid,
+      
       email,
+      status: "active",
       role,
       createdAt: new Date(),
     };

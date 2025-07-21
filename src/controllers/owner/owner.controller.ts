@@ -60,24 +60,25 @@ export class OwnerController {
     }
   }
 //update employee
-  async updateEmployee(req: EmployeeRequest, res: Response) {
-    try {
-      const { employeeId, name, email } = req.body;
-      if (!employeeId || !name || !email)
-        throw new Error("All fields are required");
-      const result = await this.ownerService.updateEmployee(
-        employeeId,
-        name,
-        email
-      );
-      res.json(result);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+async updateEmployee(req: Request, res: Response) {
+  try {
+    const { employeeId, ...updates } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({ error: "employeeId is required" });
     }
+
+    const result = await this.ownerService.updateEmployee(employeeId, updates);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
+}
+
 //delete employee
   async deleteEmployee(req: EmployeeRequest, res: Response) {
     try {
+      
       const { employeeId } = req.body;
       if (!employeeId) throw new Error("Employee ID is required");
       const result = await this.ownerService.deleteEmployee(employeeId);

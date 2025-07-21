@@ -24,7 +24,9 @@ export async function seedOwnerUser() {
 
     const ownerUser: User = {
       uid: newUser.uid,
+      name: "Owner",
       email: OWNER_EMAIL,
+      status: "active",
       phoneNumber: OWNER_PHONE,
       role: "manager",
       createdAt: new Date(),

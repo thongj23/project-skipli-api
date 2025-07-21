@@ -30,6 +30,7 @@ async createEmployee(
     employeeId,
     name,
     email,
+    status: "active",
     tasks: [],
     workSchedule: {},
     role: "employee",
@@ -37,27 +38,40 @@ async createEmployee(
 
   const user: User = {
     uid: employeeId,
-    email,
     role: "employee",
     createdAt: new Date(),
+    status: "active",
   };
+
+
   await db.collection("Employees").doc(employeeId).set(employee);
   await db.collection("Users").doc(employeeId).set(user, { merge: true });
   await sendSetupEmail(email, employeeId);
   return { success: true, employeeId };
 }
 
-  async updateEmployee(
-    employeeId: string,
-    name: string,
-    email: string
-  ): Promise<{ success: boolean }> {
-    if (!employeeId || !name || !email)
-      throw new Error("All fields are required");
-    await db.collection("Employees").doc(employeeId).update({ name, email });
-    await db.collection("Users").doc(employeeId).update({ email });
-    return { success: true };
+async updateEmployee(
+  employeeId: string,
+  updates: Partial<Pick<Employee, "name" | "email" | "department" | "role" >>
+): Promise<{ success: boolean }> {
+  if (!employeeId) {
+    throw new Error("Employee ID is required");
   }
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error("No fields to update");
+  }
+  await db.collection("Employees").doc(employeeId).update(updates);
+
+  if (updates.email) {
+    await db.collection("Users").doc(employeeId).update({
+      email: updates.email,
+    });
+  }
+
+  return { success: true };
+}
+
 
   async deleteEmployee(employeeId: string): Promise<{ success: boolean }> {
     if (!employeeId) throw new Error("Employee ID is required");
