@@ -25,30 +25,56 @@ export class TaskController {
     }
   }
 
-  async createTask(req: Request, res: Response) {
-    try {
-      const taskData = req.body;
-      if (!taskData.title) {
-        return res.status(400).json({ error: 'Title is required' });
-      }
-      const newTask = await taskService.createTask(taskData);
-      res.status(201).json(newTask);
-    } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+async createTask(req: Request, res: Response) {
+  try {
+    const taskData = req.body;
+    if (!taskData.title) {
+      return res.status(400).json({ error: 'Title is required' });
     }
-  }
 
-  async updateTask(req: Request, res: Response) {
-    try {
-      const task = await taskService.updateTask(req.params.id, req.body);
-      if (!task) {
-        return res.status(404).json({ error: 'Task not found' });
-      }
-      res.json(task);
-    } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+    const newTask = await taskService.createTask(taskData);
+
+ 
+    const io = req.app.get('io');
+    const employeeSockets = req.app.get('employeeSockets'); 
+
+    const employeeSocketId = employeeSockets.get(newTask.employeeId); 
+
+    if (employeeSocketId) {
+      io.to(employeeSocketId).emit('taskCreated', newTask);
+     
+    } else {
+      console.log('No socket found for employee', newTask.employeeId);
     }
+
+    res.status(201).json(newTask);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
+}
+
+
+ async updateTask(req: Request, res: Response) {
+  try {
+    const task = await taskService.updateTask(req.params.id, req.body);
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+  
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('taskUpdated', task); 
+    }
+
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 
   async deleteTask(req: Request, res: Response) {
     try {
@@ -61,4 +87,46 @@ export class TaskController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+ async getTasksByUserId(req: Request, res: Response) {
+  try {
+    const userId = req.params.id;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    const tasks = await taskService.getTasksByUserId(userId);
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+async updateTaskStatus(req: Request, res: Response) {
+  try {
+    const { id, status } = req.body;
+
+    if (!id || !status) {
+      return res.status(400).json({ error: 'Task ID and status are required' });
+    }
+
+    const updatedTask = await taskService.updateTaskStatus(id, status);
+    if (!updatedTask) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('taskUpdated', updatedTask); 
+    }
+
+    res.json(updatedTask);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+
+
 }

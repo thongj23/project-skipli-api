@@ -76,4 +76,25 @@ export class TaskService {
     await docRef.delete();
     return true;
   }
+
+
+  async getTasksByUserId(userId: string): Promise<Task[]> {
+  const querySnapshot = await this.tasksCollection.where('employeeId', '==', userId).get();
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+}
+
+async updateTaskStatus(taskId: string, status: string): Promise<Task | null> {
+  const docRef = this.tasksCollection.doc(taskId);
+  const docSnap = await docRef.get();
+
+  if (!docSnap.exists) return null;
+
+  await docRef.update({ status });
+
+  const updatedTask = { id: docRef.id, ...docSnap.data(), status } as Task;
+  return updatedTask;
+}
+
+
+
 }

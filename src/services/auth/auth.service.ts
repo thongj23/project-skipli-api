@@ -1,9 +1,14 @@
+
 import { db } from "../../config/firebase";
 import { User } from "../../models/user/user.model";
 import admin from "firebase-admin";
 import { Response } from "express";
 import jwt from "jsonwebtoken";
 
+import bcrypt from 'bcryptjs'; 
+
+import { Employee } from '../../models/employee/employee.model';
+import { log } from "console";
 interface AccessCodeResponse {
   success: boolean;
   message: string;
@@ -23,7 +28,7 @@ export interface ValidateAccessCodeResult {
   success: boolean;
   message?: string;
   user?: AuthUser;
-  accessToken?: string;
+  token?: string;
   refreshToken?: string;
 }
 
@@ -117,7 +122,7 @@ export class AuthService {
         role: userData.role,
       };
 
-      const accessToken = jwt.sign(
+      const token = jwt.sign(
         payload,
         process.env.JWT_SECRET || "your-secret-key",
         { expiresIn: "1h" }
@@ -132,7 +137,7 @@ export class AuthService {
       return {
         success: true,
         message: "Verification successful.",
-        accessToken,
+        token,
         refreshToken,
         user: {
           uid: userDoc.id,
@@ -147,32 +152,46 @@ export class AuthService {
     }
   }
 
-  async setupPassword(employeeId: string, password: string): Promise<{ success: boolean; message: string; accessToken?: string }> {
-    try {
-      const user = await admin.auth().getUser(employeeId);
+ async setupPassword(employeeId: string, password: string): Promise<{ success: boolean; message: string; token?: string }> {
+  try {
+    const user = await admin.auth().getUser(employeeId);
 
-      if (!user) {
-        return { success: false, message: "User not found." };
-      }
-
-      await admin.auth().updateUser(employeeId, {
-        password,
-      });
-
-      const token = await admin.auth().createCustomToken(employeeId);
-
-      return {
-        success: true,
-        message: "Password setup successful.",
-        accessToken: token,
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error.message || "Error updating password.",
-      };
+    if (!user) {
+      return { success: false, message: "User not found." };
     }
+
+    // ✅ Cập nhật mật khẩu vào Firebase Auth (raw password)
+    await admin.auth().updateUser(employeeId, {
+      password,
+    });
+
+    // ✅ Tạo custom token
+    const token = await admin.auth().createCustomToken(employeeId);
+
+    // ✅ Hash mật khẩu bằng bcrypt
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // ✅ Cập nhật Firestore (hash hoặc chỉ flag setup)
+    await db.collection('Employees').doc(employeeId).update({
+      passwordHash: hashedPassword,
+      passwordSetup: true,
+      passwordUpdatedAt: new Date(),
+    });
+
+    return {
+      success: true,
+      message: "Password setup successful.",
+      token: token,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Error updating password.",
+    };
   }
+}
+  
   setAuthCookie(res: Response, token: string): void {
    res.cookie("token", token, {
   httpOnly: true,
@@ -216,7 +235,7 @@ export class AuthService {
     return {
       success: true,
       message: "Token refreshed successfully.",
-      accessToken: newAccessToken,
+      token: newAccessToken,
       refreshToken: newRefreshToken,
       user: {
         uid: userDoc.id,
@@ -226,8 +245,55 @@ export class AuthService {
       },
     };
   } catch (error: any) {
-    console.error("refreshAccessToken error:", error);
+    console.error("refreshToken error:", error);
     return { success: false, message: "Invalid or expired refresh token." };
   }
+}
+
+async  loginWithEmailAndPassword(email: string, password: string) {
+  console.log(email,password)
+  const employeeRef = db.collection('Employees');
+  const querySnapshot = await employeeRef.where('email', '==', email).get();
+
+  if (querySnapshot.empty) {
+    return {
+      success: false,
+      message: 'Email không tồn tại.',
+    };
+  }
+
+  const userDoc = querySnapshot.docs[0];
+  const userData = userDoc.data();
+
+  const isMatch = await bcrypt.compare(password, userData.passwordHash);
+  if (!isMatch) {
+    return {
+      success: false,
+      message: 'Mật khẩu không đúng.',
+    };
+  }
+
+  const token = jwt.sign(
+    { userId: userDoc.id, role: 'employee' },
+    process.env.JWT_SECRET!,
+    { expiresIn: '15m' }
+  );
+
+  const refreshToken = jwt.sign(
+    { userId: userDoc.id },
+    process.env.JWT_REFRESH_SECRET!,
+    { expiresIn: '7d' }
+  );
+
+  return {
+    success: true,
+    message: 'Đăng nhập thành công',
+    user: {
+      id: userDoc.id,
+      ...userData,
+    },
+    token,
+    refreshToken,
+  };
 }
 }

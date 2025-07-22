@@ -1,4 +1,3 @@
-// src/main.ts
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
@@ -20,34 +19,44 @@ const io = new Server(server, {
   },
 });
 
-
 export const employeeSockets = new Map<string, string>();
 
 io.on('connection', (socket) => {
   const employeeId = socket.handshake.query.employeeId as string;
   if (employeeId) {
     employeeSockets.set(employeeId, socket.id);
-    
+    employeeSockets.forEach((socketId, empId) => {
+    });
+  } else {
   }
 
   socket.on('disconnect', () => {
     if (employeeId) {
       employeeSockets.delete(employeeId);
+  
+      if (employeeSockets.size === 0) {
+      
+      } else {
+        employeeSockets.forEach((socketId, empId) => {
+        
+        });
+      }
     }
   });
 });
-
 
 app.use(cors({
   origin: 'http://localhost:3000',
   credentials: true,
 }));
+app.set('io', io);
+app.set('employeeSockets', employeeSockets);
 app.use(cookieParser());
 app.use(express.json());
 
 app.use('/api', routes);
 
-const PORT = process.env.PORT || 3004;
+const PORT = process.env.PORT;
 seedOwnerUser()
   .then(() => {
     server.listen(PORT, () => {

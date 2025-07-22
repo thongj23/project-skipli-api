@@ -14,7 +14,6 @@ export class EmployeeController {
   constructor() {
     this.employeeService = new EmployeeService();
   }
-//login empoyee
   async login(req: LoginRequest, res: Response) {
     try {
       const { uid, email, role } = req.body;

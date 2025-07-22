@@ -5,7 +5,7 @@ export interface Employee {
   email: string;
   phoneNumber?: string;
   role: 'employee' | 'manager'; 
-  department?: 'IT' | 'Sale' | 'Marketing' | 'HR' | 'Customer Support'; // Enum hóa để tránh lỗi chính tả
+  department?: 'IT' | 'Sale' | 'Marketing' | 'HR' | 'Customer Support'; 
   status: 'active' | 'inactive';
   tasks: Task[];
   workSchedule: Record<string, string>; 
