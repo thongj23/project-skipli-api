@@ -73,7 +73,7 @@ export class AuthService {
         message: "Access code generated.",
         phoneNumber: user.phoneNumber,
         accessCode,
-        expiresIn: "15m",
+        expiresIn: "expiresIn",
       };
     } catch (error: any) {
       return {
@@ -125,7 +125,7 @@ export class AuthService {
       const token = jwt.sign(
         payload,
         process.env.JWT_SECRET || "your-secret-key",
-        { expiresIn: "1h" }
+        { expiresIn: "24h" }
       );
 
       const refreshToken = jwt.sign(
@@ -160,19 +160,19 @@ export class AuthService {
       return { success: false, message: "User not found." };
     }
 
-    // ✅ Cập nhật mật khẩu vào Firebase Auth (raw password)
+  
     await admin.auth().updateUser(employeeId, {
       password,
     });
 
-    // ✅ Tạo custom token
+  
     const token = await admin.auth().createCustomToken(employeeId);
 
-    // ✅ Hash mật khẩu bằng bcrypt
+  
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // ✅ Cập nhật Firestore (hash hoặc chỉ flag setup)
+  
     await db.collection('Employees').doc(employeeId).update({
       passwordHash: hashedPassword,
       passwordSetup: true,
@@ -276,7 +276,7 @@ async  loginWithEmailAndPassword(email: string, password: string) {
   const token = jwt.sign(
     { userId: userDoc.id, role: 'employee' },
     process.env.JWT_SECRET!,
-    { expiresIn: '15m' }
+    { expiresIn: '24h' }
   );
 
   const refreshToken = jwt.sign(

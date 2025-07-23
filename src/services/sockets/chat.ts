@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
-import { auth, db } from "../config/firebase";
-import { Message } from "../models/message/message.model";
+import { auth, db } from "../../config/firebase";
+import { Message } from "../../models/message/message.model";
 
 interface MessageData {
   receiverId: string;

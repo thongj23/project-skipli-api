@@ -1,7 +1,8 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { db } from '../../config/firebase';
 import { Task } from '../../models/task/task.model';
-import { employeeSockets } from '../../main'; 
+import { employeeSockets } from '../../config/socket'; 
+import * as admin from 'firebase-admin';
 
 export class TaskService {
   private io: SocketIOServer | null = null;
@@ -37,10 +38,30 @@ export class TaskService {
 
   }
 
-  async getAllTasks(): Promise<Task[]> {
-    const querySnapshot = await this.tasksCollection.get();
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+async getPaginatedTasks(page: number, limit: number): Promise<Task[]> {
+  const offset = (page - 1) * limit;
+
+ 
+  let query = this.tasksCollection.orderBy('createdAt', 'desc').limit(limit);
+
+ 
+  if (page > 1) {
+    const snapshot = await this.tasksCollection
+      .orderBy('createdAt', 'desc')
+      .limit(offset)
+      .get();
+
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
   }
+  const pageSnapshot = await query.get();
+
+  return pageSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+}
+
+
 
   async getTaskById(id: string): Promise<Task | undefined> {
     const docRef = this.tasksCollection.doc(id);
@@ -52,7 +73,9 @@ export class TaskService {
   async createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
     const docRef = await this.tasksCollection.add({
       ...taskData,
-      status: taskData.status || 'pending'
+       employeeId: taskData.employeeId,
+      status: taskData.status || 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     const newTask = { id: docRef.id, ...taskData } as Task;
     return newTask;
@@ -77,11 +100,38 @@ export class TaskService {
     return true;
   }
 
+async getTasksByUserIdPaginated(userId: string, page: number, limit: number): Promise<{ tasks: Task[]; total: number }> {
+  const offset = (page - 1) * limit;
 
-  async getTasksByUserId(userId: string): Promise<Task[]> {
-  const querySnapshot = await this.tasksCollection.where('employeeId', '==', userId).get();
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+  const totalSnapshot = await this.tasksCollection.where('employeeId', '==', userId).get();
+  const total = totalSnapshot.size;
+
+  let query = this.tasksCollection
+    .where('employeeId', '==', userId)
+    .orderBy('createdAt', 'desc')
+    .limit(limit);
+
+  if (page > 1) {
+    const offsetSnapshot = await this.tasksCollection
+      .where('employeeId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .limit(offset)
+      .get();
+
+    const lastDoc = offsetSnapshot.docs[offsetSnapshot.docs.length - 1];
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
+  }
+
+  const pageSnapshot = await query.get();
+  const tasks = pageSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+
+  return { tasks, total };
 }
+
+
+
 
 async updateTaskStatus(taskId: string, status: string): Promise<Task | null> {
   const docRef = this.tasksCollection.doc(taskId);

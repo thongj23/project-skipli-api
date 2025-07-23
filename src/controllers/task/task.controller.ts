@@ -4,14 +4,16 @@ import { TaskService } from '../../services/task/task.service';
 const taskService = new TaskService();
 
 export class TaskController {
-  async getAllTasks(req: Request, res: Response) {
-    try {
-      const tasks = await taskService.getAllTasks();
-      res.json(tasks);
-    } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
-    }
+async getAllTasks(req: Request, res: Response) {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const tasks = await taskService.getPaginatedTasks(page, limit);
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
   }
+}
 
   async getTaskById(req: Request, res: Response) {
     try {
@@ -34,15 +36,14 @@ async createTask(req: Request, res: Response) {
 
     const newTask = await taskService.createTask(taskData);
 
- 
+    console.log('New task created:', newTask);
+
     const io = req.app.get('io');
     const employeeSockets = req.app.get('employeeSockets'); 
-
     const employeeSocketId = employeeSockets.get(newTask.employeeId); 
 
     if (employeeSocketId) {
       io.to(employeeSocketId).emit('taskCreated', newTask);
-     
     } else {
       console.log('No socket found for employee', newTask.employeeId);
     }
@@ -53,6 +54,7 @@ async createTask(req: Request, res: Response) {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+
 
 
  async updateTask(req: Request, res: Response) {
@@ -88,18 +90,28 @@ async createTask(req: Request, res: Response) {
     }
   }
 
- async getTasksByUserId(req: Request, res: Response) {
+async getTasksByUserId(req: Request, res: Response) {
   try {
     const userId = req.params.id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    console.log(userId); 
+
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
     }
-    const tasks = await taskService.getTasksByUserId(userId);
-    res.json(tasks);
+
+    const result = await taskService.getTasksByUserIdPaginated(userId, page, limit);
+
+    res.json(result);
   } catch (error) {
+    console.error('Error in getTasksByUserId:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+
 
 async updateTaskStatus(req: Request, res: Response) {
   try {

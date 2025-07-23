@@ -22,14 +22,25 @@ export class OwnerController {
   }
 
 //get all employee
-  async getAllEmployees(req: Request, res: Response) {
-    try {
-      const employees = await this.ownerService.getAllEmployees();
-      res.json(employees);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
+async getAllEmployees(req: Request, res: Response) {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const { data, total } = await this.ownerService.getAllEmployees(page, limit);
+    res.json({
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
+}
+
+
 //get employee by id
   async getEmployee(req: EmployeeRequest, res: Response) {
     try {

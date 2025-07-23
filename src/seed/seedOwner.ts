@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import { auth, db } from "../config/firebase";
 import { User } from "../models/user/user.model";
 
+// Thông tin cố định của owner
 const OWNER_EMAIL = "owner@skipli.com";
 const OWNER_PASSWORD = "123123123";
 const OWNER_PHONE = "+84776145916";
@@ -11,7 +12,6 @@ export async function seedOwnerUser() {
     const userRecord = await auth.getUserByEmail(OWNER_EMAIL).catch(() => null);
 
     if (userRecord) {
-      console.log("Owner user already exists, skipping creation.");
       return;
     }
 
@@ -19,25 +19,25 @@ export async function seedOwnerUser() {
       email: OWNER_EMAIL,
       password: OWNER_PASSWORD,
       phoneNumber: OWNER_PHONE,
-      emailVerified: true,
+      emailVerified: true, 
     });
 
     const ownerUser: User = {
       uid: newUser.uid,
       name: "Owner",
       email: OWNER_EMAIL,
-      status: "active",
       phoneNumber: OWNER_PHONE,
-      role: "manager",
-      createdAt: new Date(),
+      role: "manager", // Role của owner
+      status: "active",
       setupCompleted: false,
+      createdAt: new Date(),
     };
 
-    await db.collection("users").doc(newUser.uid).set(ownerUser);
+    await db.collection("Users").doc(newUser.uid).set(ownerUser);
 
-    console.log(
-      `Owner user created successfully: ${OWNER_EMAIL} / ${OWNER_PHONE}`
-    );
+    console.log(` Owner user created successfull
+Email: ${OWNER_EMAIL}
+Phone: ${OWNER_PHONE}`);
   } catch (error) {
     console.error("Error creating owner user:", error);
   }

@@ -5,10 +5,17 @@ import { sendSetupEmail } from '../../services/email/email.service';
 export class OwnerService {
  
 
-  async getAllEmployees(): Promise<Employee[]> {
-    const snapshot = await db.collection("Employees").get();
-    return snapshot.docs.map((doc) => doc.data() as Employee);
-  }
+async getAllEmployees(page = 1, limit = 10): Promise<{ data: Employee[]; total: number }> {
+  const snapshot = await db.collection("Employees").get();
+  const allEmployees = snapshot.docs.map((doc) => doc.data() as Employee);
+
+  const total = allEmployees.length;
+  const start = (page - 1) * limit;
+  const paginatedData = allEmployees.slice(start, start + limit);
+
+  return { data: paginatedData, total };
+}
+
 
   async getEmployee(employeeId: string): Promise<Employee> {
     if (!employeeId) throw new Error("Employee ID is required");
